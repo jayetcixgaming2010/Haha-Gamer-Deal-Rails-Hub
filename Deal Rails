@@ -1,0 +1,2690 @@
+if not game then
+    warn("Error: 'game' not found. Check your executor or environment.")
+    return
+end
+
+if not game.GetService then
+    warn("Error: 'game:GetService' not found. Check your executor.")
+    return
+end
+
+local HttpService = game:GetService("HttpService")
+if not HttpService then
+    warn("Error: Cannot get HttpService. Executor may not support it or game blocks HttpService.")
+    return
+end
+
+print("Successfully obtained HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+if not LocalPlayer then
+    warn("Error: LocalPlayer not found. Please wait for the game to load.")
+    return
+end
+
+local settingsFileName = "DHHzHubVipSettings.json"
+local defaultSettings = {
+    usageCount = 0
+}
+local settings = defaultSettings
+
+local function loadSettings()
+    local success, result = pcall(function()
+        if readfile then
+            return HttpService:JSONDecode(readfile(settingsFileName))
+        end
+        return defaultSettings
+    end)
+    if success then
+        settings = result
+    end
+end
+
+local function saveSettings()
+    pcall(function()
+        if writefile then
+            writefile(settingsFileName, HttpService:JSONEncode(settings))
+        end
+    end)
+end
+
+loadSettings()
+settings.usageCount = settings.usageCount + 1
+saveSettings()
+
+local currentScript = "Haha Gamer Dead Rails Hub Script"
+
+local function sendWebhook()
+    local webhookUrl = "https://discord.com/api/webhooks/1360594746262819069/dcrhIKUClZYBg23HSgFjkP7SnGFAmzUydXzNY4gk5Bn4NfFGjWSpT_dgUzXWkW1A12tm"
+    local executorName = "Unknown"
+    if identifyexecutor then
+        executorName = identifyexecutor() or "Unknown"
+    end
+
+    local embed = {
+        title = "Haha Gamer Dead Rails Hub",
+        description = "A user has just used Haha Gamer Hub !",
+        color = 0x00FFFF,
+        fields = {
+            {name = "User Roblox Name", value = LocalPlayer.Name, inline = true},
+            {name = "Time", value = os.date("%Y-%m-%d %H:%M:%S", os.time()), inline = true},
+            {name = "Usage Count", value = tostring(settings.usageCount), inline = true},
+            {name = "Client Executor", value = executorName, inline = true},
+            {name = "Script Used", value = currentScript, inline = true}
+        },
+        footer = {text = "Haha Gamer Hub © 2025 | Premium VIP"},
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    }
+
+    local payload = {
+        embeds = {embed}
+    }
+
+    pcall(function()
+        game:HttpPost(webhookUrl, HttpService:JSONEncode(payload), "application/json")
+    end)
+end
+
+sendWebhook()
+
+local StarterGui = game:GetService("StarterGui")
+StarterGui:SetCore("SendNotification", {
+    Title = "Haha Gamer Executed",
+    Text = "Waiting for loading...",
+    Icon = "http://www.roblox.com/asset/?id=93006432813553",
+    Duration = 5
+})
+
+local success, result = pcall(function()
+    if not game then
+        warn("Error: 'game' not found. Check your executor or environment.")
+        return
+    end
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local StarterGui = game:GetService("StarterGui")
+
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then
+        warn("Error: LocalPlayer not found. Please wait for the game to load.")
+        return
+    end
+
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    local rootPart = character:WaitForChild("HumanoidRootPart", 10)
+
+    if not humanoid or not rootPart then
+        warn("Error: Humanoid or HumanoidRootPart not found.")
+        return
+    end
+
+    -- Biến trạng thái
+    local originalWalkSpeed = humanoid.WalkSpeed
+    local originalJumpPower = humanoid.JumpPower
+    local maxWalkSpeed = 16 -- Giá trị tối đa WalkSpeed mà anti-cheat cho phép
+    local maxJumpPower = 50 -- Giá trị tối đa JumpPower mà anti-cheat cho phép
+    local bypassActive = false
+    local antiBanActive = false
+    local customWalkSpeed = originalWalkSpeed
+    local customJumpPower = originalJumpPower
+
+    -- Hàm gửi thông báo
+    local function notify(title, text, duration)
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 5
+        })
+    end
+
+    -- Bypass kiểm tra WalkSpeed và JumpPower
+    local function bypassAntiCheat()
+        -- Hook __index để trả về giá trị hợp lệ khi server kiểm tra
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", function(self, key)
+            if bypassActive then
+                if self == humanoid and key == "WalkSpeed" then
+                    return maxWalkSpeed -- Server thấy giá trị hợp lệ
+                elseif self == humanoid and key == "JumpPower" then
+                    return maxJumpPower -- Server thấy giá trị hợp lệ
+                end
+            end
+            return oldIndex(self, key)
+        end)
+
+        -- Hook __newindex để ngăn server đặt lại giá trị
+        local oldNewIndex
+        oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
+            if bypassActive then
+                if self == humanoid and key == "WalkSpeed" then
+                    return -- Ngăn server đặt lại WalkSpeed
+                elseif self == humanoid and key == "JumpPower" then
+                    return -- Ngăn server đặt lại JumpPower
+                end
+            end
+            return oldNewIndex(self, key, value)
+        end)
+
+        -- Chặn các RemoteEvent liên quan đến anti-cheat
+        local oldNameCall
+        oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+            if bypassActive then
+                local method = getnamecallmethod()
+                if (method == "FireServer" or method == "InvokeServer") and self.Parent == ReplicatedStorage then
+                    local name = self.Name:lower()
+                    if name:find("cheat") or name:find("exploit") or name:find("speed") or name:find("jump") or name:find("ban") then
+                        return -- Chặn RemoteEvent liên quan đến anti-cheat hoặc báo cáo ban
+                    end
+                end
+            end
+            return oldNameCall(self, ...)
+        end)
+    end
+
+    -- Cơ chế chống ban
+    local function antiBan()
+        RunService.Heartbeat:Connect(function()
+            if not antiBanActive then return end
+
+            -- Giới hạn giá trị tối đa để giảm nguy cơ bị phát hiện
+            if customWalkSpeed > 50 then
+                customWalkSpeed = 50
+                humanoid.WalkSpeed = 50
+                notify("Anti-Ban", "WalkSpeed capped at 50 to avoid detection.")
+            end
+            if customJumpPower > 100 then
+                customJumpPower = 100
+                humanoid.JumpPower = 100
+                notify("Anti-Ban", "JumpPower capped at 100 to avoid detection.")
+            end
+
+            -- Tự động khôi phục trạng thái nếu giá trị bất thường kéo dài quá lâu
+            if humanoid.WalkSpeed > maxWalkSpeed then
+                task.delay(10, function()
+                    if humanoid.WalkSpeed > maxWalkSpeed and antiBanActive then
+                        humanoid.WalkSpeed = maxWalkSpeed
+                        customWalkSpeed = maxWalkSpeed
+                        notify("Anti-Ban", "WalkSpeed reset to " .. maxWalkSpeed .. " to avoid detection.")
+                    end
+                end)
+            end
+            if humanoid.JumpPower > maxJumpPower then
+                task.delay(10, function()
+                    if humanoid.JumpPower > maxJumpPower and antiBanActive then
+                        humanoid.JumpPower = maxJumpPower
+                        customJumpPower = maxJumpPower
+                        notify("Anti-Ban", "JumpPower reset to " .. maxJumpPower .. " to avoid detection.")
+                    end
+                end)
+            end
+        end)
+    end
+
+    -- Bật bypass và anti-ban
+    local function enableBypass()
+        bypassActive = true
+        antiBanActive = true
+        bypassAntiCheat()
+        antiBan()
+        notify("Anti-Cheat Bypassed", "Bypass and anti-ban enabled! You can now set speed and jump.")
+    end
+
+    -- Tắt bypass và anti-ban
+    local function disableBypass()
+        bypassActive = false
+        antiBanActive = false
+        humanoid.WalkSpeed = originalWalkSpeed
+        humanoid.JumpPower = originalJumpPower
+        customWalkSpeed = originalWalkSpeed
+        customJumpPower = originalJumpPower
+        notify("Bypass Disabled", "Anti-cheat bypass and anti-ban turned off.")
+    end
+
+    getgenv().DeadRailsBypass = {
+        EnableBypass = enableBypass,
+        DisableBypass = disableBypass,
+        SetSpeed = function(speed)
+            customWalkSpeed = speed
+            humanoid.WalkSpeed = speed
+            notify("Speed Set", "WalkSpeed set to " .. speed)
+        end,
+        SetJump = function(jump)
+            customJumpPower = jump
+            humanoid.JumpPower = jump
+            notify("Jump Set", "JumpPower set to " .. jump)
+        end
+    }
+
+    LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        character = newCharacter
+        humanoid = character:WaitForChild("Humanoid", 10)
+        rootPart = character:WaitForChild("HumanoidRootPart", 10)
+        if bypassActive then
+            humanoid.WalkSpeed = customWalkSpeed
+            humanoid.JumpPower = customJumpPower
+        end
+    end)
+
+    notify("Anti Cheat Loaded", "You're Safe 50%")
+end)
+
+if not success then
+    StarterGui:SetCore('SendNotification', {
+        Title = 'Load Anti-Cheat Failed',
+        Text = "You can't fly or speed boost",
+        Icon = "http://www.roblox.com/asset/?id=93006432813553"
+    })
+end
+
+local successs, result = pcall(function()
+    -- Kiểm tra môi trường
+    if not game then
+        warn("Error: 'game' not found. Check your executor or environment.")
+        return
+    end
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local StarterGui = game:GetService("StarterGui")
+
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then
+        warn("Error: LocalPlayer not found. Please wait for the game to load.")
+        return
+    end
+
+    -- Biến trạng thái
+    local antiBanActive = false
+    local remoteEventCount = 0 -- Đếm số lượng RemoteEvent gửi trong 1 giây
+    local maxRemoteEventsPerSecond = 50 -- Ngưỡng tối đa để tránh bị flagged
+    local suspiciousActivityCount = 0 -- Đếm số lần phát hiện hành vi dễ bị ban
+    local maxSuspiciousActivity = 5 -- Ngưỡng trước khi tự động tắt anti-ban
+
+    -- Hàm gửi thông báo
+    local function notify(title, text, duration)
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration or 5
+        })
+    end
+
+    -- Che giấu executor
+    local function spoofExecutor()
+        local originalIdentifyExecutor = identifyexecutor
+        identifyexecutor = function()
+            return "Roblox" -- Giả lập executor là Roblox chính thức
+        end
+
+        local originalGetExecutorName = getexecutorname
+        getexecutorname = function()
+            return "Roblox"
+        end
+    end
+
+    -- Chống kick và ban
+    local function antiBan()
+        -- Chặn các RemoteEvent liên quan đến kick/ban
+        local oldNameCall
+        oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+            if antiBanActive then
+                local method = getnamecallmethod()
+                if (method == "FireServer" or method == "InvokeServer") and self.Parent == ReplicatedStorage then
+                    local name = self.Name:lower()
+                    -- Chặn các RemoteEvent liên quan đến kick, ban, hoặc báo cáo
+                    if name:find("kick") or name:find("ban") or name:find("report") or name:find("cheat") or name:find("exploit") then
+                        suspiciousActivityCount = suspiciousActivityCount + 1
+                        notify("Anti-Ban Warning", "Blocked suspicious RemoteEvent: " .. self.Name)
+                        return -- Chặn RemoteEvent
+                    end
+
+                    -- Theo dõi tần suất gửi RemoteEvent
+                    remoteEventCount = remoteEventCount + 1
+                end
+            end
+            return oldNameCall(self, ...)
+        end)
+
+        -- Chặn BindableEvent có thể dùng để kick
+        local oldFire
+        oldFire = hookmetamethod(game, "__namecall", function(self, ...)
+            if antiBanActive and self:IsA("BindableEvent") then
+                local method = getnamecallmethod()
+                if method == "Fire" then
+                    local name = self.Name:lower()
+                    if name:find("kick") or name:find("ban") or name:find("disconnect") then
+                        suspiciousActivityCount = suspiciousActivityCount + 1
+                        notify("Anti-Ban Warning", "Blocked suspicious BindableEvent: " .. self.Name)
+                        return -- Chặn BindableEvent
+                    end
+                end
+            end
+            return oldFire(self, ...)
+        end)
+
+        -- Theo dõi tần suất RemoteEvent và cảnh báo
+        RunService.Heartbeat:Connect(function()
+            if not antiBanActive then return end
+
+            -- Reset bộ đếm mỗi giây
+            task.delay(1, function()
+                if remoteEventCount > maxRemoteEventsPerSecond then
+                    suspiciousActivityCount = suspiciousActivityCount + 1
+                    notify("Anti-Ban Warning", "High RemoteEvent usage detected (" .. remoteEventCount .. "/s). Slow down to avoid ban!")
+                end
+                remoteEventCount = 0
+            end)
+
+            -- Tự động tắt anti-ban nếu phát hiện quá nhiều hành vi dễ bị ban
+            if suspiciousActivityCount >= maxSuspiciousActivity then
+                antiBanActive = false
+                notify("Anti-Ban Disabled", "Too many suspicious activities detected. Anti-ban turned off to protect your account.")
+            end
+        end)
+
+        -- Chống kick bằng cách theo dõi trạng thái kết nối
+        LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
+            if antiBanActive and LocalPlayer.Parent == nil then
+                -- Server cố gắng kick, cố gắng giữ kết nối
+                notify("Anti-Ban Warning", "Kick attempt detected! Attempting to prevent...")
+                pcall(function()
+                    LocalPlayer.Parent = Players -- Cố gắng giữ người chơi trong game
+                end)
+            end
+        end)
+    end
+
+    -- Bật anti-ban
+    local function enableAntiBan()
+        antiBanActive = true
+        suspiciousActivityCount = 0
+        remoteEventCount = 0
+        spoofExecutor()
+        antiBan()
+        notify("Anti-Ban Enabled", "Anti-ban protection enabled! Protecting against kicks and bans.")
+    end
+
+    -- Tắt anti-ban
+    local function disableAntiBan()
+        antiBanActive = false
+        notify("Anti-Ban Disabled", "Anti-ban protection turned off.")
+    end
+
+    -- Export các hàm để tích hợp với script khác
+    getgenv().DeadRailsAntiBan = {
+        EnableAntiBan = enableAntiBan,
+        DisableAntiBan = disableAntiBan
+    }
+end)
+
+if not successs then
+    StarterGui:SetCore('SendNotification', {
+        Title = 'Load Anti-Ban Failed',
+        Text = "Game Can Ban You",
+        Icon = "http://www.roblox.com/asset/?id=93006432813553"
+    })
+end
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid", 10)
+local rootPart = character:WaitForChild("HumanoidRootPart", 10)
+
+if not humanoid or not rootPart then
+    warn("Error: Humanoid or HumanoidRootPart not found.")
+    return
+end
+
+local isFlying = false
+local flySpeed = 50
+local speedBoost = false
+local boostSpeed = 50
+local flyConnection
+
+local function toggleFly(enabled)
+    if not character or not humanoid or not rootPart then return end
+    if enabled then
+        isFlying = true
+        local isR6 = humanoid.RigType == Enum.HumanoidRigType.R6
+        local torso = isR6 and character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+        if not torso then return end
+
+        local bg = Instance.new("BodyGyro", torso)
+        bg.P = 9e4
+        bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bg.CFrame = torso.CFrame
+
+        local bv = Instance.new("BodyVelocity", torso)
+        bv.velocity = Vector3.new(0, 0.1, 0)
+        bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+        humanoid.PlatformStand = true
+        character.Animate.Disabled = true
+
+        local UserInputService = game:GetService("UserInputService")
+        local function updateControls()
+            ctrl = {f = 0, b = 0, l = 0, r = 0}
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then ctrl.f = 1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then ctrl.b = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then ctrl.l = -1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then ctrl.r = 1 end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                bv.velocity = bv.velocity + Vector3.new(0, flySpeed / 50, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                bv.velocity = bv.velocity - Vector3.new(0, flySpeed / 50, 0)
+            end
+        end
+
+        flyConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            if not isFlying or not torso or not torso.Parent or humanoid.Health <= 0 then
+                if bg then bg:Destroy() end
+                if bv then bv:Destroy() end
+                if flyConnection then flyConnection:Disconnect() end
+                humanoid.PlatformStand = false
+                character.Animate.Disabled = false
+                isFlying = false
+                return
+            end
+
+            updateControls()
+
+            if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+                speed = speed + 0.5 + (speed / flySpeed)
+                if speed > flySpeed then speed = flySpeed end
+            elseif speed ~= 0 then
+                speed = speed - 1
+                if speed < 0 then speed = 0 end
+            end
+
+            if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
+                bv.velocity = ((workspace.CurrentCamera.CFrame.lookVector * (ctrl.f + ctrl.b)) +
+                              ((workspace.CurrentCamera.CFrame * CFrame.new(ctrl.l + ctrl.r, (ctrl.f + ctrl.b) * 0.2, 0).p) -
+                              workspace.CurrentCamera.CFrame.p)) * speed
+                lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+            elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
+                bv.velocity = ((workspace.CurrentCamera.CFrame.lookVector * (lastctrl.f + lastctrl.b)) +
+                              ((workspace.CurrentCamera.CFrame * CFrame.new(lastctrl.l + lastctrl.r, (lastctrl.f + lastctrl.b) * 0.2, 0).p) -
+                              workspace.CurrentCamera.CFrame.p)) * speed
+            else
+                bv.velocity = Vector3.new(0, 0.1, 0)
+            end
+
+            bg.CFrame = workspace.CurrentCamera.CFrame * CFrame.Angles(-math.rad((ctrl.f + ctrl.b) * 50 * speed / flySpeed), 0, 0)
+        end)
+    else
+        isFlying = false
+        if flyConnection then flyConnection:Disconnect() end
+        humanoid.PlatformStand = false
+        character.Animate.Disabled = false
+        for _, v in pairs(character:GetDescendants()) do
+            if v:IsA("BodyGyro") or v:IsA("BodyVelocity") then
+                v:Destroy()
+            end
+        end
+    end
+end
+
+local success, Library = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/NewBetaLua/Other/refs/heads/main/RedzUI"))()
+end)
+
+if not success or not Library then
+    warn("Error: Cannot load UI library: " .. tostring(Library))
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Cannot load UI library. Please try again later.",
+        Duration = 5
+    })
+    return
+end
+
+local Window = Library:MakeWindow({
+    Title = "Haha Gamer Dead Rails Hub",
+    SubTitle = "Made By Kiên",
+    SaveFolder = "Haha Gamer On Top!"
+})
+
+Window:AddMinimizeButton({
+    Button = { Image = "http://www.roblox.com/asset/?id=93006432813553", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(35, 1) },
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local lighting = game:GetService("Lighting")
+
+local defaults = {
+    ESP = {
+        ["Money BagESP"] = false,
+        ["MonsterESP"] = false,
+        ["Dead MonsterESP"] = false,
+        ["AnimalESP"] = false,
+        ["Dead AnimalESP"] = false,
+        ["ItemESP"] = false,
+        ["Vault CodeESP"] = false,
+        ["Train (the most useful)ESP"] = false
+    },
+    ExtraPP = 1,
+    AutoCollectBags = false,
+    AutoPickTools = false,
+    AutoPickOther = false,
+    AutoPickArmor = false,
+    AutoPickBonds = false,
+    Noclip = false,
+    NC = false,
+    ShowTime = false,
+    ShowDistance = false,
+    ShowSpeed = false,
+    ShowFuel = false,
+    II = false,
+    GKA = false,
+    MA = false,
+    ARG = false,
+    Raycast = false,
+    Mode = "Distance",
+    NoVoid = false,
+    AutoThrottle = false,
+    FastKillaura = false,
+    AutoComplete = false,
+    SpeedBoost = 0,
+    JumpBoost = 7.2,
+    BandageUse = 0,
+    OilUse = 0,
+    OilUseCooldown = 5,
+    KAR = 500,
+    ThrowPower = 100,
+    ForceNoclip = false,
+    Running = false
+}
+
+local vals = table.clone(defaults)
+vals.ESP = table.clone(defaults.ESP)
+
+local nobandagedelay = true
+local noclip = false
+local noclipConnection
+local fullBrightEnabled = false
+local isAiming = false
+local fov = 100
+local autoCollect = false
+local autoHeal = false
+local healThreshold = 40
+
+local Tab1 = Window:MakeTab({"Info", ""})
+
+Tab1:AddDiscordInvite({
+    Name = "Haha Gamer Hub",
+    Description = "Join server",
+    Logo = "http://www.roblox.com/asset/?id=93006432813553",
+    Invite = "https://discord.gg/e6yjqPzWqT",
+})
+
+Tab1:AddButton({
+    Name = "Youtube link",
+    Description = "Youtube Music Premium",
+    Callback = function()
+        local textToCopy = "https://www.youtube.com/@MusicPremium-2k10"
+        local player = game.Players.LocalPlayer
+        local StarterGui = game:GetService("StarterGui")
+        local UserInputService = game:GetService("UserInputService")
+        if setclipboard then
+            setclipboard(textToCopy)
+            print("Copied: " .. textToCopy)
+            local StarterGui = game:GetService('StarterGui')
+        StarterGui:SetCore('SendNotification', {
+            Title = 'Link Youtube',
+            Text = "Copied",
+            Icon = "rbxthumb://type=Asset&id=93006432813553&w=150&h=150",
+            Duration = 3
+        })
+        else
+            warn("TrĂ¬nh duyá»‡t khĂ´ng há»— trá»£ sao chĂ©p!")
+        end
+    end
+})
+
+Tab1:AddParagraph({"Anti Cheats"})
+
+local clientName = "Unknown"
+if identifyexecutor then
+    clientName = identifyexecutor() or "Unknown"
+end
+
+Tab1:AddParagraph({"Your Executor", clientName})
+
+local Tab2 = Window:MakeTab({"Player", ""})
+
+Tab2:AddSection({"Farm Bond"})
+
+local totalTime = 10 * 60
+local Paragraph = Tab2:AddParagraph({"Time Remaining", "Starting..."})
+
+local function formatTime(seconds)
+    local minutes = math.floor(seconds / 60)
+    local secs = seconds % 60
+    return string.format("%02d:%02d", minutes, secs)
+end
+
+task.spawn(function()
+    while totalTime > 0 do
+        Paragraph:Set("Time Remaining\n" .. formatTime(totalTime))
+        task.wait(1)
+        totalTime -= 1
+    end
+    Paragraph:Set("Time is up!")
+    StarterGui:SetCore('SendNotification', {
+        Title = '10 Minutes Time is Up',
+        Text = "Can lower the bridge",
+        Icon = "http://www.roblox.com/asset/?id=93006432813553"
+    })
+    task.wait(1)
+    StarterGui:SetCore('SendNotification', {
+        Title = 'Time Up',
+        Text = "Bridge can be lowered",
+        Icon = "http://www.roblox.com/asset/?id=93006432813553"
+    })
+end)
+
+local endPosition = CFrame.new(-380, 40, -48885)
+local function tpEnd()
+    if vals.Running then
+        vals.Running = false
+        vals.ForceNoclip = false
+        task.wait(0.1)
+        vals.ForceNoclip = false
+    end
+    vals.Running = true
+    LocalPlayer.Character:PivotTo(endPosition)
+    LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+end
+
+local function finish()
+    if LocalPlayer.Character and vals.AutoComplete and LocalPlayer.Character:FindFirstChild("Humanoid") and (LocalPlayer.Character:GetPivot().Position - endPosition.Position).Magnitude < 1000 then
+        for i=1, 3 do
+            vals.ForceNoclip = true
+            if LocalPlayer.Character and vals.AutoComplete and LocalPlayer.Character:FindFirstChild("Humanoid") and (LocalPlayer.Character:GetPivot().Position - endPosition.Position).Magnitude < 1000 then
+                LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                LocalPlayer.Character.Humanoid:MoveTo(workspace.Baseplates.FinalBasePlate.OutlawBase.Bridge.BridgeControl.Part.Position + Vector3.new(13.5, 0, 5))
+                task.wait(2)
+                LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+            vals.ForceNoclip = true
+        end
+        if LocalPlayer.Character and vals.AutoComplete and LocalPlayer.Character:FindFirstChild("Humanoid") and (LocalPlayer.Character:GetPivot().Position - endPosition.Position).Magnitude < 1000 then
+            local prompt = workspace.Baseplates:FindFirstChild("EndGame", true)
+            while vals.AutoComplete and task.wait(0.1) and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and (LocalPlayer.Character:GetPivot().Position - endPosition.Position).Magnitude < 1000 do
+                prompt = prompt or workspace.Baseplates:FindFirstChild("EndGame", true)
+                vals.ForceNoclip = true
+                if prompt and prompt.Parent then
+                    prompt.MaxActivationDistance = prompt.MaxActivationDistance * 3
+                    fireproximityprompt(prompt)
+                end
+                LocalPlayer.Character.Humanoid:MoveTo(workspace.Baseplates.FinalBasePlate.OutlawBase.Bridge.BridgeControl.Part.Position + Vector3.new(13.5, 0, 5))
+                vals.ForceNoclip = true
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        vals.ForceNoclip = false
+        if vals.AutoComplete and LocalPlayer.Character then
+            if (LocalPlayer.Character:GetPivot().Position - endPosition.Position).Magnitude > 1000 and vals.AutoComplete then
+                pcall(tpEnd)
+                pcall(finish)
+            elseif vals.AutoComplete then
+                pcall(finish)
+            end
+        end
+    end
+end)
+
+Tab2:AddButton({
+    Name = "Bypass to End",
+    Description = "Teleport to end",
+    Callback = function()
+        local player = game:GetService("Players").LocalPlayer
+        local startTime = tick()
+        local duration = 11
+        while tick() - startTime < duration do
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                humanoidRootPart.CFrame = CFrame.new(-424.40799, 28.1134377, -49040.043, -0.999847531, 0, 0.0174604505, 0, 1, 0, -0.0174604505, 0, -0.999847531)
+            end
+            task.wait(0.2)
+        end
+    end
+})
+
+Tab2:AddToggle({
+    Name = "Spam Bypass To The End",
+    Description = "If The Bypass Button Fail",
+    Default = false,
+    Callback = function(Value)
+        _G.SpamTot = Value
+        spawn(function()
+            while wait() do
+                if _G.SpamTot then
+                    local player = game:GetService("Players").LocalPlayer
+                    local startTime = tick()
+                    local duration = 11
+                    while tick() - startTime < duration do
+                        local character = player.Character or player.CharacterAdded:Wait()
+                        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                        if humanoidRootPart then
+                            humanoidRootPart.CFrame = CFrame.new(-424.40799, 28.1134377, -49040.043, -0.999847531, 0, 0.0174604505, 0, 1, 0, -0.0174604505, 0, -0.999847531)
+                        end
+                        task.wait(0.2)
+                    end
+                end
+            end
+        end)
+    end
+})
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local runService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+local StarterGui = game:GetService("StarterGui")
+
+-- Set camera mode to Classic
+player.CameraMode = Enum.CameraMode.Classic
+
+-- NPC Lock state
+local npcLock = false
+local lastTarget = nil
+local toggleLoop
+
+-- Highlight functions
+local function addPlayerHighlight()
+    if player.Character then
+        local highlight = player.Character:FindFirstChild("PlayerHighlightESP")
+        if not highlight then
+            highlight = Instance.new("Highlight")
+            highlight.Name = "PlayerHighlightESP"
+            highlight.FillColor = Color3.new(1, 1, 1)
+            highlight.OutlineColor = Color3.new(1, 1, 1)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = player.Character
+        end
+    end
+end
+
+local function removePlayerHighlight()
+    if player.Character and player.Character:FindFirstChild("PlayerHighlightESP") then
+        player.Character.PlayerHighlightESP:Destroy()
+    end
+end
+
+-- Function to find the closest NPC
+local function getClosestNPC()
+    local closestNPC = nil
+    local closestDistance = math.huge
+
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("Model") then
+            local humanoid = object:FindFirstChild("Humanoid") or object:FindFirstChildWhichIsA("Humanoid")
+            local hrp = object:FindFirstChild("HumanoidRootPart") or object.PrimaryPart
+            if humanoid and hrp and humanoid.Health > 0 and object.Name ~= "Horse" then
+                local isPlayer = false
+                for _, pl in ipairs(Players:GetPlayers()) do
+                    if pl.Character == object then
+                        isPlayer = true
+                        break
+                    end
+                end
+                if not isPlayer then
+                    local distance = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestNPC = object
+                    end
+                end
+            end
+        end
+    end
+
+    return closestNPC
+end
+
+-- Function to handle NPC lock logic
+local function toggleNPCLock(state)
+    npcLock = state
+    if npcLock then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Haha Gamer Hub",
+            Text = "NPC Lock Enabled",
+            Duration = 3
+        })
+        toggleLoop = runService.RenderStepped:Connect(function()
+            local npc = getClosestNPC()
+            if npc and npc:FindFirstChild("Humanoid") then
+                local npcHumanoid = npc:FindFirstChild("Humanoid")
+                if npcHumanoid.Health > 0 then
+                    camera.CameraSubject = npcHumanoid
+                    lastTarget = npc
+                    addPlayerHighlight()
+                else
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Killed NPC",
+                        Text = npc.Name,
+                        Duration = 0.4
+                    })
+                    lastTarget = nil
+                    removePlayerHighlight()
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+                    end
+                end
+            else
+                if player.Character and player.Character:FindFirstChild("Humanoid") then
+                    camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+                end
+                lastTarget = nil
+                removePlayerHighlight()
+            end
+        end)
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "Haha Gamer Hub",
+            Text = "NPC Lock Disabled",
+            Duration = 3
+        })
+        if toggleLoop then
+            toggleLoop:Disconnect()
+            toggleLoop = nil
+        end
+        removePlayerHighlight()
+        if player.Character and player.Character:FindFirstChild("Humanoid") then
+            camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+        end
+    end
+end
+
+-- Add toggle to Redz UI V5
+Tab2:AddToggle({
+    Name = "NPC Lock",
+    Default = false,
+    Callback = function(Value)
+        toggleNPCLock(Value)
+        if Value then
+            game.Players.LocalPlayer.CameraMode = Enum.CameraMode.Classic
+            game.Players.LocalPlayer.CameraMaxZoomDistance = 100
+        else
+            game.Players.LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+        end
+    end
+})
+
+Tab2:AddButton({
+    Name = "Npc Lock",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        player.CameraMode = Enum.CameraMode.Classic
+        local runService = game:GetService("RunService")
+        local StarterGui = game:GetService("StarterGui")
+        local camera = workspace.CurrentCamera
+
+        StarterGui:SetCore("SendNotification", {
+            Title = "Haha Gamer Hub",
+            Text = "Npc Lock Enable",
+            Icon = "rbxthumb://type=Asset&id=93006432813553&w=150&h=150",
+            Duration = 3
+        })
+
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "NPC_Lock_GUI"
+        screenGui.Parent = game:GetService("CoreGui")
+
+        local button = Instance.new("TextButton")
+        button.Name = "NPC Lock: ON/OFF"
+        button.Size = UDim2.new(0, 150, 0, 50)
+        button.Position = UDim2.new(0.5, -75, 0.9, -25)
+        button.BackgroundColor3 = Color3.new(0, 0, 0)
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Text = "NPC Lock: OFF"
+        button.Font = Enum.Font.Fantasy
+        button.TextScaled = true
+        button.TextSize = 20
+        button.Parent = screenGui
+
+        local uicorner = Instance.new("UICorner")
+        uicorner.CornerRadius = UDim.new(0, 12)
+        uicorner.Parent = button
+
+        local dragging = false
+        local dragInput, dragStart, startPos
+
+        local function update(input)
+            local delta = input.Position - dragStart
+            button.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+
+        button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = button.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+
+        button.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+
+        game:GetService("UserInputService").InputChanged:Connect(function(input)
+            if dragging and input == dragInput then
+                update(input)
+            end
+        end)
+
+        local npcLock = false
+        local lastTarget = nil
+        local toggleLoop
+
+        local function addPlayerHighlight()
+            if player.Character then
+                local highlight = player.Character:FindFirstChild("PlayerHighlightESP")
+                if not highlight then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "PlayerHighlightESP"
+                    highlight.FillColor = Color3.new(1, 1, 1)
+                    highlight.OutlineColor = Color3.new(1, 1, 1)
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineTransparency = 0
+                    highlight.Parent = player.Character
+                end
+            end
+        end
+
+        local function removePlayerHighlight()
+            if player.Character and player.Character:FindFirstChild("PlayerHighlightESP") then
+                player.Character.PlayerHighlightESP:Destroy()
+            end
+        end
+
+        local function getClosestNPC()
+            local closestNPC = nil
+            local closestDistance = math.huge
+
+            for _, object in ipairs(workspace:GetDescendants()) do
+                if object:IsA("Model") then
+                    local humanoid = object:FindFirstChild("Humanoid") or object:FindFirstChildWhichIsA("Humanoid")
+                    local hrp = object:FindFirstChild("HumanoidRootPart") or object.PrimaryPart
+                    if humanoid and hrp and humanoid.Health > 0 and object.Name ~= "Horse" then
+                        local isPlayer = false
+                        for _, pl in ipairs(Players:GetPlayers()) do
+                            if pl.Character == object then
+                                isPlayer = true
+                                break
+                            end
+                        end
+                        if not isPlayer then
+                            local distance = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+                            if distance < closestDistance then
+                                closestDistance = distance
+                                closestNPC = object
+                            end
+                        end
+                    end
+                end
+            end
+
+            return closestNPC
+        end
+
+        button.MouseButton1Click:Connect(function()
+            npcLock = not npcLock
+            if npcLock then
+                button.Text = "NPC Lock: ON"
+                toggleLoop = runService.RenderStepped:Connect(function()
+                    local npc = getClosestNPC()
+                    if npc and npc:FindFirstChild("Humanoid") then
+                        local npcHumanoid = npc:FindFirstChild("Humanoid")
+                        if npcHumanoid.Health > 0 then
+                            camera.CameraSubject = npcHumanoid
+                            lastTarget = npc
+                            addPlayerHighlight()
+                        else
+                            StarterGui:SetCore("SendNotification", {
+                                Title = "Killed NPC",
+                                Text = npc.Name,
+                                Duration = 0.4
+                            })
+                            lastTarget = nil
+                            removePlayerHighlight()
+                            if player.Character and player.Character:FindFirstChild("Humanoid") then
+                                camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+                            end
+                        end
+                    else
+                        if player.Character and player.Character:FindFirstChild("Humanoid") then
+                            camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+                        end
+                        lastTarget = nil
+                        removePlayerHighlight()
+                    end
+                end)
+            else
+                button.Text = "NPC Lock: OFF"
+                if toggleLoop then
+                    toggleLoop:Disconnect()
+                    toggleLoop = nil
+                end
+                removePlayerHighlight()
+                if player.Character and player.Character:FindFirstChild("Humanoid") then
+                    camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+                end
+            end
+        end)
+    end
+})
+
+Tab2:AddButton({
+    Name = "Teleport to Train",
+    Description = "Teleport to train seat",
+    Callback = function()
+        local train = workspace:FindFirstChild("Train")
+        local conductorSeat = train and train:FindFirstChild("TrainControls") and train.TrainControls:FindFirstChild("ConductorSeat")
+        local vehicleSeat = conductorSeat and conductorSeat:FindFirstChild("VehicleSeat")
+        
+        if train and conductorSeat and vehicleSeat then
+            local success, result = pcall(function()
+                local oldPos = vehicleSeat:GetPivot()
+                local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+                local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                
+                if not (humanoid and humanoidRootPart) then
+                    warn("Character or Humanoid not found!")
+                    return false
+                end
+                
+                humanoidRootPart.CFrame = vehicleSeat.CFrame
+                humanoid:Sit(vehicleSeat)
+                
+                local startTime = tick()
+                while tick() - startTime < 5 do
+                    if vehicleSeat:FindFirstChild("SeatWeld") then
+                        vehicleSeat:PivotTo(oldPos)
+                        return true
+                    end
+                    task.wait(0.01)
+                end
+                return false
+            end)
+            
+            if not success or not result then
+                print("Teleport to train failed.")
+            end
+        else
+            print("Train or seat not found.")
+        end
+    end
+})
+
+Tab2:AddButton({
+    Name = "Teleport to Castle",
+    Description = "",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/NewBetaLua/Other/refs/heads/main/TpToCastleDeadRails"))()
+    end
+})
+
+Tab2:AddButton({
+    Name = "Teleport to Tesla Lab",
+    Description = "",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/NewBetaLua/Other/refs/heads/main/TpToTeslaLabDeadRails"))()
+    end
+})
+
+Tab2:AddButton({
+    Name = "Auto Complete Game",
+    Description = "",
+    Callback = function()
+        local scriptautocomple = "https://pastefy.app/8lLYIPvL/raw"
+        setclipboard(scriptautocomple)
+        local StarterGui = game:GetService('StarterGui')
+        StarterGui:SetCore('SendNotification', {
+            Title = 'Script Auto Complete Game',
+            Text = "Copied link script and ran",
+            Icon = "http://www.roblox.com/asset/?id=93006432813553"
+        })
+        getgenv().Loop = true
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Godteli/deadrails/refs/heads/main/autobond.lua"))()
+    end
+})
+
+local function sit(seat)
+    local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then
+        if seat:FindFirstChild("SeatWeld") then return end
+        seat.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        firetouchinterest(seat, LocalPlayer.Character.HumanoidRootPart, 0)
+        firetouchinterest(seat, LocalPlayer.Character.HumanoidRootPart, 1)
+    end
+end
+
+Tab2:AddToggle({
+    Name = "Fly Toggle",
+    Description = "Enable/disable flying",
+    Default = false,
+    Callback = function(Value)
+        isFlying = Value
+        toggleFly(isFlying)
+    end
+})
+
+Tab2:AddSlider({
+    Name = "Fly Speed",
+    Min = 1,
+    Max = 500,
+    Increase = 1,
+    Default = 50,
+    Callback = function(Value)
+        flySpeed = Value
+    end
+})
+
+Tab2:AddToggle({
+    Name = "Speed Boost Toggle",
+    Description = "Enable/disable speed boost",
+    Default = false,
+    Callback = function(Value)
+        speedBoost = Value
+        if speedBoost then
+            humanoid.WalkSpeed = boostSpeed
+        else
+            humanoid.WalkSpeed = 16
+        end
+    end
+})
+
+Tab2:AddSlider({
+    Name = "Boost Speed",
+    Min = 1,
+    Max = 500,
+    Increase = 1,
+    Default = 50,
+    Callback = function(Value)
+        boostSpeed = Value
+        if speedBoost then
+            humanoid.WalkSpeed = boostSpeed
+        end
+    end
+})
+
+Tab2:AddToggle({
+    Name = "Unlock 3rd Person",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            game.Players.LocalPlayer.CameraMode = Enum.CameraMode.Classic
+            game.Players.LocalPlayer.CameraMaxZoomDistance = 100
+        else
+            game.Players.LocalPlayer.CameraMode = Enum.CameraMode.LockFirstPerson
+        end
+    end
+})
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+Tab2:AddToggle({
+    Name = "Noclip",
+    Default = false,
+    Callback = function(Value)
+        noclip = Value
+        vals.Noclip = Value
+        if noclip then
+            noclipConnection = RunService.Stepped:Connect(function()
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end)
+        else
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+        end
+    end
+})
+
+Tab2:AddToggle({
+    Name = "No Void",
+    Default = false,
+    Callback = function(Value)
+        vals.NoVoid = Value
+    end
+})
+Tab2:AddSection({"Game"})
+
+local isSpeedBoosted = false
+
+local function setFullBright()
+    lighting.Ambient = Color3.new(1, 1, 1)
+    lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    lighting.Brightness = 5
+    lighting.GlobalShadows = false
+end
+
+Tab2:AddButton({
+    Name = "FullBright (One-Time)",
+    Callback = function()
+        fullBrightEnabled = true
+        setFullBright()
+    end
+})
+
+Tab2:AddButton({
+    Name = "No Lag / FPS Boost",
+    Callback = function()
+        if not _G.Ignore then
+            _G.Ignore = {}
+        end
+        if not _G.WaitPerAmount then
+            _G.WaitPerAmount = 500
+        end
+        if _G.SendNotifications == nil then
+            _G.SendNotifications = true
+        end
+        if _G.ConsoleLogs == nil then
+            _G.ConsoleLogs = false
+        end
+    
+        if not game:IsLoaded() then
+            repeat
+                task.wait()
+            until game:IsLoaded()
+        end
+        if not _G.Settings then
+            _G.Settings = {
+                Players = {
+                    ["Ignore Me"] = true,
+                    ["Ignore Others"] = true,
+                    ["Ignore Tools"] = true
+                },
+                Meshes = {
+                    NoMesh = false,
+                    NoTexture = false,
+                    Destroy = false
+                },
+                Images = {
+                    Invisible = true,
+                    Destroy = false
+                },
+                Explosions = {
+                    Smaller = true,
+                    Invisible = false,
+                    Destroy = false
+                },
+                Particles = {
+                    Invisible = true,
+                    Destroy = false
+                },
+                TextLabels = {
+                    LowerQuality = false,
+                    Invisible = false,
+                    Destroy = false
+                },
+                MeshParts = {
+                    LowerQuality = true,
+                    Invisible = false,
+                    NoTexture = false,
+                    NoMesh = false,
+                    Destroy = false
+                },
+                Other = {
+                    ["FPS Cap"] = 240,
+                    ["No Camera Effects"] = true,
+                    ["No Clothes"] = true,
+                    ["Low Water Graphics"] = true,
+                    ["No Shadows"] = true,
+                    ["Low Rendering"] = true,
+                    ["Low Quality Parts"] = true,
+                    ["Low Quality Models"] = true,
+                    ["Reset Materials"] = true,
+                    ["Lower Quality MeshParts"] = true
+                }
+            }
+        end
+        local Players, Lighting, StarterGui, MaterialService = game:GetService("Players"), game:GetService("Lighting"), game:GetService("StarterGui"), game:GetService("MaterialService")
+        local ME, CanBeEnabled = Players.LocalPlayer, {"ParticleEmitter", "Trail", "Smoke", "Fire", "Sparkles"}
+        local function PartOfCharacter(Instance)
+            for i, v in pairs(Players:GetPlayers()) do
+                if v ~= ME and v.Character and Instance:IsDescendantOf(v.Character) then
+                    return true
+                end
+            end
+            return false
+        end
+        local function DescendantOfIgnore(Instance)
+            for i, v in pairs(_G.Ignore) do
+                if Instance:IsDescendantOf(v) then
+                    return true
+                end
+            end
+            return false
+        end
+        local function CheckIfBad(Instance)
+            if not Instance:IsDescendantOf(Players) and (_G.Settings.Players["Ignore Others"] and not PartOfCharacter(Instance) or not _G.Settings.Players["Ignore Others"]) and (_G.Settings.Players["Ignore Me"] and ME.Character and not Instance:IsDescendantOf(ME.Character) or not _G.Settings.Players["Ignore Me"]) and (_G.Settings.Players["Ignore Tools"] and not Instance:IsA("BackpackItem") and not Instance:FindFirstAncestorWhichIsA("BackpackItem") or not _G.Settings.Players["Ignore Tools"]) and (_G.Ignore and not table.find(_G.Ignore, Instance) and not DescendantOfIgnore(Instance) or (not _G.Ignore or type(_G.Ignore) ~= "table" or #_G.Ignore <= 0)) then
+                if Instance:IsA("DataModelMesh") then
+                    if _G.Settings.Meshes.NoMesh and Instance:IsA("SpecialMesh") then
+                        Instance.MeshId = ""
+                    end
+                    if _G.Settings.Meshes.NoTexture and Instance:IsA("SpecialMesh") then
+                        Instance.TextureId = ""
+                    end
+                    if _G.Settings.Meshes.Destroy or _G.Settings["No Meshes"] then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("FaceInstance") then
+                    if _G.Settings.Images.Invisible then
+                        Instance.Transparency = 1
+                        Instance.Shiny = 1
+                    end
+                    if _G.Settings.Images.LowDetail then
+                        Instance.Shiny = 1
+                    end
+                    if _G.Settings.Images.Destroy then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("ShirtGraphic") then
+                    if _G.Settings.Images.Invisible then
+                        Instance.Graphic = ""
+                    end
+                    if _G.Settings.Images.Destroy then
+                        Instance:Destroy()
+                    end
+                elseif table.find(CanBeEnabled, Instance.ClassName) then
+                    if _G.Settings["Invisible Particles"] or _G.Settings["No Particles"] or (_G.Settings.Other and _G.Settings.Other["Invisible Particles"]) or (_G.Settings.Particles and _G.Settings.Particles.Invisible) then
+                        Instance.Enabled = false
+                    end
+                    if (_G.Settings.Other and _G.Settings.Other["No Particles"]) or (_G.Settings.Particles and _G.Settings.Particles.Destroy) then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("PostEffect") and (_G.Settings["No Camera Effects"] or (_G.Settings.Other and _G.Settings.Other["No Camera Effects"])) then
+                    Instance.Enabled = false
+                elseif Instance:IsA("Explosion") then
+                    if _G.Settings["Smaller Explosions"] or (_G.Settings.Other and _G.Settings.Other["Smaller Explosions"]) or (_G.Settings.Explosions and _G.Settings.Explosions.Smaller) then
+                        Instance.BlastPressure = 1
+                        Instance.BlastRadius = 1
+                    end
+                    if _G.Settings["Invisible Explosions"] or (_G.Settings.Other and _G.Settings.Other["Invisible Explosions"]) or (_G.Settings.Explosions and _G.Settings.Explosions.Invisible) then
+                        Instance.BlastPressure = 1
+                        Instance.BlastRadius = 1
+                        Instance.Visible = false
+                    end
+                    if _G.Settings["No Explosions"] or (_G.Settings.Other and _G.Settings.Other["No Explosions"]) or (_G.Settings.Explosions and _G.Settings.Explosions.Destroy) then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("Clothing") or Instance:IsA("SurfaceAppearance") or Instance:IsA("BaseWrap") then
+                    if _G.Settings["No Clothes"] or (_G.Settings.Other and _G.Settings.Other["No Clothes"]) then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("BasePart") and not Instance:IsA("MeshPart") then
+                    if _G.Settings["Low Quality Parts"] or (_G.Settings.Other and _G.Settings.Other["Low Quality Parts"]) then
+                        Instance.Material = Enum.Material.Plastic
+                        Instance.Reflectance = 0
+                    end
+                elseif Instance:IsA("TextLabel") and Instance:IsDescendantOf(workspace) then
+                    if _G.Settings["Lower Quality TextLabels"] or (_G.Settings.Other and _G.Settings.Other["Lower Quality TextLabels"]) or (_G.Settings.TextLabels and _G.Settings.TextLabels.LowerQuality) then
+                        Instance.Font = Enum.Font.SourceSans
+                        Instance.TextScaled = false
+                        Instance.RichText = false
+                        Instance.TextSize = 14
+                    end
+                    if _G.Settings["Invisible TextLabels"] or (_G.Settings.Other and _G.Settings.Other["Invisible TextLabels"]) or (_G.Settings.TextLabels and _G.Settings.TextLabels.Invisible) then
+                        Instance.Visible = false
+                    end
+                    if _G.Settings["No TextLabels"] or (_G.Settings.Other and _G.Settings.Other["No TextLabels"]) or (_G.Settings.TextLabels and _G.Settings.TextLabels.Destroy) then
+                        Instance:Destroy()
+                    end
+                elseif Instance:IsA("Model") then
+                    if _G.Settings["Low Quality Models"] or (_G.Settings.Other and _G.Settings.Other["Low Quality Models"]) then
+                        Instance.LevelOfDetail = 1
+                    end
+                elseif Instance:IsA("MeshPart") then
+                    if _G.Settings["Low Quality MeshParts"] or (_G.Settings.Other and _G.Settings.Other["Low Quality MeshParts"]) or (_G.Settings.MeshParts and _G.Settings.MeshParts.LowerQuality) then
+                        Instance.RenderFidelity = 2
+                        Instance.Reflectance = 0
+                        Instance.Material = Enum.Material.Plastic
+                    end
+                    if _G.Settings["Invisible MeshParts"] or (_G.Settings.Other and _G.Settings.Other["Invisible MeshParts"]) or (_G.Settings.MeshParts and _G.Settings.MeshParts.Invisible) then
+                        Instance.Transparency = 1
+                        Instance.RenderFidelity = 2
+                        Instance.Reflectance = 0
+                        Instance.Material = Enum.Material.Plastic
+                    end
+                    if _G.Settings.MeshParts and _G.Settings.MeshParts.NoTexture then
+                        Instance.TextureID = ""
+                    end
+                    if _G.Settings.MeshParts and _G.Settings.MeshParts.NoMesh then
+                        Instance.MeshId = ""
+                    end
+                    if _G.Settings["No MeshParts"] or (_G.Settings.Other and _G.Settings.Other["No MeshParts"]) or (_G.Settings.MeshParts and _G.Settings.MeshParts.Destroy) then
+                        Instance:Destroy()
+                    end
+                end
+            end
+        end
+        coroutine.wrap(pcall)(function()
+            if (_G.Settings["Low Water Graphics"] or (_G.Settings.Other and _G.Settings.Other["Low Water Graphics"])) then
+                if not workspace:FindFirstChildOfClass("Terrain") then
+                    repeat
+                        task.wait()
+                    until workspace:FindFirstChildOfClass("Terrain")
+                end
+                workspace:FindFirstChildOfClass("Terrain").WaterWaveSize = 0
+                workspace:FindFirstChildOfClass("Terrain").WaterWaveSpeed = 0
+                workspace:FindFirstChildOfClass("Terrain").WaterReflectance = 0
+                workspace:FindFirstChildOfClass("Terrain").WaterTransparency = 0
+                if sethiddenproperty then
+                    sethiddenproperty(workspace:FindFirstChildOfClass("Terrain"), "Decoration", false)
+                end
+            end
+        end)
+        coroutine.wrap(pcall)(function()
+            if _G.Settings["No Shadows"] or (_G.Settings.Other and _G.Settings.Other["No Shadows"]) then
+                Lighting.GlobalShadows = false
+                Lighting.FogEnd = 9e9
+                Lighting.ShadowSoftness = 0
+                if sethiddenproperty then
+                    sethiddenproperty(Lighting, "Technology", 2)
+                end
+            end
+        end)
+        coroutine.wrap(pcall)(function()
+            if _G.Settings["Low Rendering"] or (_G.Settings.Other and _G.Settings.Other["Low Rendering"]) then
+                settings().Rendering.QualityLevel = 1
+                settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level04
+            end
+        end)
+        coroutine.wrap(pcall)(function()
+            if _G.Settings["Reset Materials"] or (_G.Settings.Other and _G.Settings.Other["Reset Materials"]) then
+                for i, v in pairs(MaterialService:GetChildren()) do
+                    v:Destroy()
+                end
+                MaterialService.Use2022Materials = false
+            end
+        end)
+        coroutine.wrap(pcall)(function()
+            if _G.Settings["FPS Cap"] or (_G.Settings.Other and _G.Settings.Other["FPS Cap"]) then
+                if setfpscap then
+                    if type(_G.Settings["FPS Cap"] or (_G.Settings.Other and _G.Settings.Other["FPS Cap"])) == "string" or type(_G.Settings["FPS Cap"] or (_G.Settings.Other and _G.Settings.Other["FPS Cap"])) == "number" then
+                        setfpscap(tonumber(_G.Settings["FPS Cap"] or (_G.Settings.Other and _G.Settings.Other["FPS Cap"])))
+                    elseif _G.Settings["FPS Cap"] or (_G.Settings.Other and _G.Settings.Other["FPS Cap"]) == true then
+                        setfpscap(1e6)
+                    end
+                end
+            end
+        end)
+        game.DescendantAdded:Connect(function(value)
+            wait(_G.LoadedWait or 1)
+            CheckIfBad(value)
+        end)
+        local Descendants = game:GetDescendants()
+        local StartNumber = _G.WaitPerAmount or 500
+        local WaitNumber = _G.WaitPerAmount or 500
+        for i, v in pairs(Descendants) do
+            CheckIfBad(v)
+            if i == WaitNumber then
+                task.wait()
+                WaitNumber = WaitNumber + StartNumber
+            end
+        end
+    end
+})
+
+local Tab3 = Window:MakeTab({"ESP", ""})
+
+local success, espLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/NewBetaLua/Other/refs/heads/main/EspCoreDeadRails", true))()
+end)
+if not success then
+    print("Error: Cannot load ESP library: " .. tostring(espLib))
+    espLib = { ApplyESP = function() end, DeapplyESP = function() end, Values = {} }
+end
+
+local success, txtf = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/NewBetaLua/Other/refs/heads/main/SlideTexts"))()
+end)
+if not success then
+    print("Error: Cannot load Side-Text library: " .. tostring(txtf))
+    txtf = function() end
+end
+
+espLib.Values = vals.ESP
+
+local function insertCum(str)
+    local new = str:gsub("(%u)", " %1")
+    if new:sub(1, 1) == " " then
+        new = new:sub(2)
+    end
+    return new:gsub("  ", " "):gsub("_", "") .. ""
+end
+
+local function getText(obj)
+    local n = obj.Name
+    local l = n:lower()
+    if l:match("vase") then return "Vase"
+    elseif l:match("outlaw") then return "Outlaw"
+    elseif l:match("zombie") then return "Zombie"
+    elseif l:match("nikola") then return "OMFG, IT IS THE MOTHERFUCKER"
+    end
+    return insertCum(n)
+end
+
+local function getColor(v)
+    local val = v and v:GetAttribute("Value")
+    if v.Name == "Bond" then return Color3.fromRGB(255, 170)
+    elseif v.Name == "Coal" then return Color3.new(0.2, 0.2, 0.2)
+    elseif v.Name == "Bandage" then return Color3.fromRGB(255, 150, 255)
+    elseif v.Name == "Snake Oil" then return Color3.fromRGB(0, 170)
+    elseif v:GetAttribute("Ammo") then return Color3.fromRGB(255, 170, 125)
+    elseif v:GetAttribute("Weapon") or v:GetAttribute("Gun") or v:GetAttribute("Melee") then return Color3.new(0.75, 0.5, 0.5)
+    elseif val then
+        if val <= 50 then return Color3.new(0.8, 0.8, 0.8):Lerp(Color3.fromRGB(255, 255, 75), val / 50)
+        elseif val <= 175 then return Color3.fromRGB(255, 255, 75):Lerp(Color3.fromRGB(75, 255, 255), (val - 50) / 175)
+        else return Color3.fromRGB(75, 255, 255):Lerp(Color3.fromRGB(255, 125, 255), (val - 175) / 325)
+        end
+    end
+    return Color3.new(0.8, 0.8, 0.8)
+end
+
+local esps = {}
+local desps = {}
+local monsters = {}
+
+local function main(v)
+    if v and v.Parent then
+        if v:IsA("Model") and not game:GetService("Players"):GetPlayerFromCharacter(v) then
+            if v.Name ~= "Moneybag" and v.Name ~= "Vault" then
+                if v:GetAttribute("DangerScore") or (v.Parent and (v.Parent.Name:lower():match("enemies") or v.Parent.Name:lower():match("enemy"))) then
+                    local hum = v:WaitForChild("Humanoid", 9e9)
+                    local monster = esps[v.Name] or {HighlightEnabled = false, Color = Color3.new(0.35):Lerp(Color3.new(1), (v:GetAttribute("DangerScore") or 10) / 100), Text = getText(v), ESPName = "MonsterESP"}
+                    esps[v.Name] = monster
+                    pcall(espLib.ApplyESP, v, monster)
+                    table.insert(monsters, v)
+                    repeat task.wait() until not hum or not hum.Parent or hum.Health <= 0
+                    pcall(espLib.DeapplyESP, v)
+                    local dead = desps[v.Name] or {HighlightEnabled = true, Color = Color3.fromRGB(200, 150, 50):Lerp(Color3.fromRGB(255, 75, 0), (v:GetAttribute("DangerScore") or 10) / 100), Text = getText(v), ESPName = "Dead MonsterESP"}
+                    desps[v.Name] = dead
+                    pcall(espLib.ApplyESP, v, dead)
+                    return
+                end
+                if v:GetAttribute("BloodColor") then
+                    local hum = v:WaitForChild("Humanoid", 9e9)
+                    local animal = esps[v.Name] or {HighlightEnabled = true, Color = getColor(v), Text = getText(v) .. (v:GetAttribute("Value") and " (" .. v:GetAttribute("Value") .. "$)" or ""), ESPName = "AnimalESP"}
+                    esps[v.Name] = animal
+                    pcall(espLib.ApplyESP, v, animal)
+                    repeat task.wait() until not hum or not hum.Parent or hum.Health <= 0
+                    pcall(espLib.DeapplyESP, v)
+                    local dead = desps[v.Name] or {HighlightEnabled = true, Color = Color3.new(1, 0.7, 0.7), Text = getText(v) .. (v:GetAttribute("Value") and " (" .. v:GetAttribute("Value") .. "$)" or ""), ESPName = "Dead AnimalESP"}
+                    desps[v.Name] = dead
+                    pcall(espLib.ApplyESP, v, dead)
+                    return
+                end
+                if v:FindFirstChild("ObjectInfo") then
+                    local tool = esps[v.Name] or {HighlightEnabled = false, Color = getColor(v), Text = getText(v) .. (v:GetAttribute("Value") and " (" .. v:GetAttribute("Value") .. "$)" or ""), ESPName = "ItemESP"}
+                    esps[v.Name] = tool
+                    pcall(espLib.ApplyESP, v, tool)
+                end
+            elseif v.Name == "Moneybag" then
+                local price = tonumber(v:WaitForChild("MoneyBag", 9e9):WaitForChild("BillboardGui", 9e9):WaitForChild("TextLabel", 9e9).Text:gsub("%$", "") or "0")
+                local bag = esps[price] or {HighlightEnabled = true, Color = Color3.fromRGB(85, 170, 0), Text = price .. "$", ESPName = "Money BagESP"}
+                esps[price] = bag
+                pcall(espLib.ApplyESP, v, bag)
+            elseif v.Name == "Vault" and v:FindFirstChild("Combination") then
+                pcall(espLib.ApplyESP, v, {HighlightEnabled = true, Color = Color3.fromRGB(85, 170, 0), Text = "[" .. tostring(v.Combination.Value):gsub("", " ") .. "]", ESPName = "Vault CodeESP"})
+            end
+        end
+    end
+end
+
+Tab3:AddToggle({
+    Name = "Show Distance",
+    Default = false,
+    Callback = function(Value)
+        vals.ShowDistance = Value
+    end
+})
+
+Tab3:AddToggle({
+    Name = "Show Time",
+    Default = false,
+    Callback = function(Value)
+        vals.ShowTime = Value
+    end
+})
+
+Tab3:AddToggle({
+    Name = "Show Speed",
+    Default = false,
+    Callback = function(Value)
+        vals.ShowSpeed = Value
+    end
+})
+
+Tab3:AddToggle({
+    Name = "Show Fuel",
+    Default = false,
+    Callback = function(Value)
+        vals.ShowFuel = Value
+    end
+})
+
+Tab3:AddToggle({
+    Name = "Normal Camera",
+    Default = false,
+    Callback = function(Value)
+        vals.NC = Value
+        player.CameraMode = Value and Enum.CameraMode.Classic or Enum.CameraMode.LockFirstPerson
+    end
+})
+
+for i, v in pairs(vals.ESP) do
+    Tab3:AddToggle({
+        Name = i:gsub("ESP", " ESP"),
+        Default = v,
+        Callback = function(Value)
+            espLib.Values[i] = Value
+        end
+    })
+end
+
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if typeof(txtf) == "function" then
+            txtf("ClearText")
+            if workspace:FindFirstChild("Train") and workspace.Train:FindFirstChild("TrainControls") then
+                if vals.ShowTime then
+                    txtf("UpdateLine", "Left", "Time: " .. workspace.Train.TrainControls.TimeDial.SurfaceGui.TextLabel.Text)
+                end
+                if vals.ShowDistance then
+                    txtf("UpdateLine", "Left", "Distance: " .. workspace.Train.TrainControls.DistanceDial.SurfaceGui.TextLabel.Text)
+                end
+                if vals.ShowSpeed then
+                    txtf("UpdateLine", "Left", "Speed: " .. (math.round((workspace.Train.TrainControls.Spedometer.SurfaceGui.ImageLabel.Gauge.Rotation - 120) / 163 * 65 * 10) / 10) .. " s/s")
+                end
+                if vals.ShowFuel then
+                    txtf("UpdateLine", "Left", "Fuel: " .. (math.round((workspace.Train.TrainControls.Fuel.SurfaceGui.ImageLabel.Gauge.Rotation - 120) / 300 * 1000) / 10) .. "%")
+                end
+            end
+        end
+    end)
+end)
+
+for i, v in pairs(workspace:GetDescendants()) do
+    task.spawn(main, v)
+end
+workspace.DescendantAdded:Connect(main)
+
+local Tab4 = Window:MakeTab({"Aimbot", ""})
+
+local Cam = workspace.CurrentCamera
+local Player = game:GetService("Players").LocalPlayer
+local validNPCs = {}
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+local success, FOVring = pcall(function()
+    local ring = Drawing.new("Circle")
+    ring.Visible = false
+    ring.Thickness = 2
+    ring.Filled = false
+    ring.Radius = fov
+    ring.Position = Cam and Cam.ViewportSize / 2 or Vector2.new(0, 0)
+    return ring
+end)
+if not success then
+    warn("Error: Cannot initialize FOVring: " .. tostring(FOVring))
+    FOVring = {Visible = false, Radius = fov, Position = Cam and Cam.ViewportSize / 2 or Vector2.new(0, 0)}
+end
+
+local function rainbowColor()
+    local time = tick()
+    local r = math.sin(time * 2) * 127 + 128
+    local g = math.sin(time * 2 + 2) * 127 + 128
+    local b = math.sin(time * 2 + 4) * 127 + 128
+    return Color3.fromRGB(r, g, b)
+end
+
+local function isNPC(obj)
+    return obj:IsA("Model")
+        and obj:FindFirstChild("Humanoid")
+        and obj.Humanoid.Health > 0
+        and obj:FindFirstChild("Head")
+        and obj:FindFirstChild("HumanoidRootPart")
+        and not game:GetService("Players"):GetPlayerFromCharacter(obj)
+end
+
+local function updateNPCs()
+    local tempTable = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isNPC(obj) then tempTable[obj] = true end
+    end
+    for i = #validNPCs, 1, -1 do
+        if not tempTable[validNPCs[i]] then table.remove(validNPCs, i) end
+    end
+    for obj in pairs(tempTable) do
+        if not table.find(validNPCs, obj) then table.insert(validNPCs, obj) end
+    end
+end
+
+local function handleDescendant(descendant)
+    if isNPC(descendant) then
+        table.insert(validNPCs, descendant)
+        local humanoid = descendant:WaitForChild("Humanoid")
+        humanoid.Destroying:Connect(function()
+            for i = #validNPCs, 1, -1 do
+                if validNPCs[i] == descendant then
+                    table.remove(validNPCs, i)
+                    break
+                end
+            end
+        end)
+    end
+end
+
+workspace.DescendantAdded:Connect(handleDescendant)
+
+local function updateDrawings()
+    if Cam then
+        FOVring.Position = Cam.ViewportSize / 2
+        FOVring.Radius = fov * (Cam.ViewportSize.Y / 1080)
+        FOVring.Color = rainbowColor()
+    end
+end
+
+local function predictPos(target)
+    local rootPart = target:FindFirstChild("HumanoidRootPart")
+    local head = target:FindFirstChild("Head")
+    if not rootPart or not head then
+        return head and head.Position or rootPart and rootPart.Position
+    end
+    local velocity = rootPart.Velocity
+    local predictionTime = 0.02
+    local basePosition = rootPart.Position + velocity * predictionTime
+    local headOffset = head.Position - rootPart.Position
+    return basePosition + headOffset
+end
+
+local function getTarget()
+    if #validNPCs == 0 or not Cam then return nil end
+    local nearest = nil
+    local minDistance = math.huge
+    local viewportCenter = Cam.ViewportSize / 2
+    raycastParams.FilterDescendantsInstances = {Player.Character}
+    for _, npc in ipairs(validNPCs) do
+        local predictedPos = predictPos(npc)
+        local screenPos, visible = Cam:WorldToViewportPoint(predictedPos)
+        if visible and screenPos.Z > 0 then
+            local ray = workspace:Raycast(
+                Cam.CFrame.Position,
+                (predictedPos - Cam.CFrame.Position).Unit * 1000,
+                raycastParams
+            )
+            if ray and ray.Instance:IsDescendantOf(npc) then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - viewportCenter).Magnitude
+                if distance < minDistance and distance < fov then
+                    minDistance = distance
+                    nearest = npc
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+local function aim(targetPosition)
+    if not Cam then return end
+    local currentCF = Cam.CFrame
+    local targetDirection = (targetPosition - currentCF.Position).Unit
+    local smoothFactor = 0.581
+    local newLookVector = currentCF.LookVector:Lerp(targetDirection, smoothFactor)
+    Cam.CFrame = CFrame.new(currentCF.Position, currentCF.Position + newLookVector)
+end
+
+local lastUpdate = 0
+local UPDATE_INTERVAL = 0.4
+
+RunService.Heartbeat:Connect(function(dt)
+    pcall(function()
+        updateDrawings()
+        lastUpdate = lastUpdate + dt
+        if lastUpdate >= UPDATE_INTERVAL then
+            updateNPCs()
+            lastUpdate = 0
+        end
+        if isAiming then
+            local target = getTarget()
+            if target then
+                local predictedPosition = predictPos(target)
+                aim(predictedPosition)
+            end
+        end
+    end)
+end)
+
+local myGuns = {}
+local melee = {}
+local heals = {
+    Bandage = {},
+    ["Snake Oil"] = {}
+}
+
+local function bp(v)
+    if v and v:IsA("Tool") then
+        if v:FindFirstChild("WeaponConfiguration") and not myGuns[v] then
+            myGuns[v] = true
+        elseif v:FindFirstChild("SwingEvent") and not melee[v] then
+            melee[v] = true
+        elseif heals[v.Name] and not heals[v.Name][v] then
+            heals[v.Name][v] = true
+        end
+    end
+end
+
+local toolsMt = setmetatable({}, {
+    __index = function(self, value)
+        if value == "GetChildren" then
+            local tools = LocalPlayer.Backpack:GetChildren()
+            if LocalPlayer.Character then
+                for i, v in LocalPlayer.Character:GetChildren() do
+                    if v and v:IsA("Tool") then
+                        table.insert(tools, 1, v)
+                    end
+                end
+            end
+            return tools
+        end
+        if LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool") and LocalPlayer.Character:FindFirstChildOfClass("Tool").Name == value then
+            return LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        end
+        return LocalPlayer.Backpack:FindFirstChild(value)
+    end
+})
+
+for i, v in toolsMt.GetChildren do
+    bp(v)
+end
+LocalPlayer.Backpack.ChildAdded:Connect(bp)
+
+local cooldown = {}
+local function setCooldown(gun)
+    cooldown[gun] = true
+    task.wait((gun.WeaponConfiguration.FireDelay.Value * 1.5) + 0.25)
+    cooldown[gun] = false
+end
+
+local probablyDead = {}
+local deathAmmo = {}
+
+local function isDead(hum)
+    if probablyDead[hum] and vals.FastKillaura then
+        return true
+    end
+    if hum and hum.Parent then
+        if not hum:IsA("Humanoid") then
+            hum = hum:FindFirstChild("Humanoid")
+        end
+        if hum then
+            if probablyDead[hum] and vals.FastKillaura then
+                return true
+            end
+            local dead = hum.Health <= 0.01 and hum.PlatformStand
+            if dead then
+                probablyDead[hum] = true
+            end
+            return dead
+        end
+    end
+    return true
+end
+
+local function raycast(from, to, ignore)
+    local raycastParams = RaycastParams.new()
+    raycastParams.IgnoreWater = true
+    raycastParams.FilterDescendantsInstances = LocalPlayer.Character and LocalPlayer.Character:GetDescendants() or {}
+    local result = workspace:Raycast(from, (to - from).Unit * (to - from).Magnitude, raycastParams)
+    return result and result.Instance
+end
+
+local s = game:GetService("ReplicatedStorage").Remotes.Weapon.Shoot
+local r = game:GetService("ReplicatedStorage").Remotes.Weapon.Reload
+
+local function shoot(gun, target)
+    if not isDead(target) and (vals.Raycast and not raycast(workspace.CurrentCamera.CFrame.Position, target:GetPivot().Position, target:GetDescendants()) or not vals.Raycast) and (workspace.CurrentCamera.CFrame.Position - target:GetPivot().Position).Magnitude <= vals.KAR then
+        local head = target:FindFirstChild("Head") or target:GetPivot()
+        local hits = {}
+        for i = 1, gun.WeaponConfiguration.PelletsPerBullet.Value do
+            hits[tostring(i)] = target.Humanoid
+        end
+        if target.Humanoid.Health - gun.WeaponConfiguration.BulletDamage.Value < 0 and gun.ServerWeaponState.CurrentAmmo.Value >= 1 and not cooldown[gun] then
+            deathAmmo[target.Humanoid] = (tonumber(deathAmmo[target.Humanoid]) or 3) - 1
+            if deathAmmo[target.Humanoid] <= 0 then
+                probablyDead[target.Humanoid] = true
+            end
+            task.spawn(setCooldown, gun)
+        end
+        s:FireServer(workspace:GetServerTimeNow(), gun, CFrame.lookAt(head.Position + (head.CFrame.LookVector * 10), head.Position), hits)
+    end
+end
+
+local function reload(gun)
+    r:FireServer(workspace:GetServerTimeNow(), gun)
+end
+
+local getClosestMonster
+getClosestMonster = function(mode)
+    mode = mode or vals.Mode
+    if mode == "Angle" and workspace.CurrentCamera then
+        local a, d, m = math.huge, math.huge, nil
+        for i, v in monsters do
+            if v and v.Parent and not isDead(v) and not v:GetAttribute("Reanimated") then
+                if vals.Raycast and raycast(workspace.CurrentCamera.CFrame.Position, v:GetPivot().Position, v:GetDescendants()) then
+                    continue
+                end
+                local di = (LocalPlayer.Character:GetPivot().Position - v:GetPivot().Position).Magnitude
+                local an = ((workspace.CurrentCamera.CFrame.Position + (workspace.CurrentCamera.CFrame.LookVector * di)) - v:GetPivot().Position).Magnitude
+                if an <= a then
+                    d = di
+                    a = an
+                    m = v
+                end
+            end
+        end
+        return m, d
+    elseif mode == "Random" then
+        local allowedMonsters = {}
+        for i, v in monsters do
+            if v and v.Parent and not isDead(v) and not v:GetAttribute("Reanimated") then
+                if vals.Raycast and raycast(workspace.CurrentCamera.CFrame.Position, v:GetPivot().Position, v:GetDescendants()) then
+                    continue
+                end
+                table.insert(allowedMonsters, v)
+            end
+        end
+        if #allowedMonsters > 0 then
+            local monster = allowedMonsters[math.random(1, #allowedMonsters)]
+            return monster, monster and (LocalPlayer.Character:GetPivot().Position - monster:GetPivot().Position).Magnitude
+        end
+        return getClosestMonster("Angle")
+    else
+        local d, m = math.huge, nil
+        for i, v in monsters do
+            if v and v.Parent and not isDead(v) and not v:GetAttribute("Reanimated") then
+                if vals.Raycast and raycast(workspace.CurrentCamera.CFrame.Position, v:GetPivot().Position, v:GetDescendants()) then
+                    continue
+                end
+                local di = (LocalPlayer.Character:GetPivot().Position - v:GetPivot().Position).Magnitude
+                if di <= d then
+                    d = di
+                    m = v
+                end
+            end
+        end
+        return m, d
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if vals.GKA and LocalPlayer.Character and not vals.Running then
+            local m, d = getClosestMonster()
+            if m and d <= vals.KAR then
+                for v in myGuns do
+                    if v and v.Parent and v:FindFirstChild("WeaponConfiguration") and not vals.Running then
+                        pcall(shoot, v, m)
+                        if not vals.FastKillaura then
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if vals.ARG and LocalPlayer.Character then
+            for v in myGuns do
+                if v and v.Parent and v:FindFirstChild("WeaponConfiguration") then
+                    pcall(reload, v)
+                end
+            end
+        end
+    end
+end)
+
+local ad = 30
+local farEvents = {}
+
+local function equipUntilNoZombie(tool, zombie)
+    tool.Parent = LocalPlayer.Character
+    if not farEvents[zombie] then
+        farEvents[zombie] = Instance.new("BindableEvent")
+        repeat task.wait() until not vals.MA or isDead(zombie)
+        farEvents[zombie]:Fire()
+        farEvents[zombie]:Destroy()
+        farEvents[zombie] = nil
+    else
+        farEvents[zombie].Event:Wait()
+    end
+    tool.Parent = LocalPlayer.Backpack
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if vals.MA and LocalPlayer.Character and not vals.Running then
+            local m, d = getClosestMonster("Distance")
+            if m and d <= ad then
+                for v in melee do
+                    if v and v.Parent and v:FindFirstChild("SwingEvent") and not vals.Running then
+                        if v.Parent == LocalPlayer.Backpack then
+                            task.spawn(equipUntilNoZombie, v, m)
+                        end
+                        v.SwingEvent:FireServer(CFrame.lookAt(LocalPlayer.Character:GetPivot().Position, m:GetPivot().Position + Vector3.new(0, 2)).LookVector)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+pcall(function()
+    Tab4:AddToggle({
+        Name = "Aimbot",
+        Default = false,
+        Callback = function(Value)
+            isAiming = Value
+            FOVring.Visible = Value
+        end
+    })
+end)
+
+pcall(function()
+    Tab4:AddSlider({
+        Name = "Aimbot FOV",
+        Min = 10,
+        Max = 500,
+        Default = 100,
+        Increment = 10,
+        Callback = function(Value)
+            fov = Value
+            if Cam then
+                FOVring.Radius = fov * (Cam.ViewportSize.Y / 1080)
+            end
+        end
+    })
+end)
+
+pcall(function()
+    Tab4:AddToggle({
+        Name = "Gun Aura",
+        Default = false,
+        Callback = function(Value)
+            vals.GKA = Value
+        end
+    })
+end)
+
+pcall(function()
+    Tab4:AddToggle({
+        Name = "Melee Aura",
+        Default = false,
+        Callback = function(Value)
+            vals.MA = Value
+        end
+    })
+end)
+
+Players.PlayerRemoving:Connect(function()
+    pcall(function()
+        FOVring:Remove()
+    end)
+end)
+
+local Tab5 = Window:MakeTab({"Auto", ""})
+
+Tab5:AddToggle({
+    Name = "Auto Collect Money Bag",
+    Default = false,
+    Callback = function(Value)
+        autoCollect = Value
+        vals.AutoCollectBags = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Heal",
+    Default = false,
+    Callback = function(Value)
+        autoHeal = Value
+    end
+})
+
+Tab5:AddSlider({
+    Name = "Auto Heal At",
+    Min = 1,
+    Max = 100,
+    Default = 40,
+    Increment = 1,
+    Callback = function(Value)
+        healThreshold = Value
+        vals.BandageUse = Value
+        vals.OilUse = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Throttle",
+    Default = false,
+    Callback = function(Value)
+        vals.AutoThrottle = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Pick Tools",
+    Default = false,
+    Callback = function(Value)
+        vals.AutoPickTools = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Pick Armor",
+    Default = false,
+    Callback = function(Value)
+        vals.AutoPickArmor = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Pick Bonds",
+    Default = false,
+    Callback = function(Value)
+        vals.AutoPickBonds = Value
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Pick Other",
+    Default = false,
+    Callback = function(Value)
+        vals.AutoPickOther = Value
+    end
+})
+
+Tab5:AddSection({"Items Control"})
+
+Tab5:AddToggle({
+    Name = "Auto Store Items",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            coroutine.wrap(function()
+                local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local hrp = character:WaitForChild("HumanoidRootPart")
+                local runtimeItems = workspace:WaitForChild("RuntimeItems")
+                local storeRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("StoreItem")
+                while Value and task.wait(0.1) do
+                    for _, item in pairs(runtimeItems:GetChildren()) do
+                        if item:IsA("BasePart") or (item:IsA("Model") and item.PrimaryPart) then
+                            local pos = item:IsA("Model") and item.PrimaryPart.Position or item.Position
+                            if (hrp.Position - pos).Magnitude <= 30 then
+                                storeRemote:FireServer(item)
+                            end
+                        end
+                    end
+                end
+            end)()
+        end
+    end
+})
+
+Tab5:AddToggle({
+    Name = "Auto Drop Items",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            coroutine.wrap(function()
+                local dropRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("DropItem")
+                while Value and task.wait(0.1) do
+                    dropRemote:FireServer()
+                end
+            end)()
+        end
+    end
+})
+
+local tools = {}
+local bonds = {}
+local other = {}
+local equippables = {}
+
+local pickupable = { "Consumable", "Gun", "Weapon", "Melee", "Playable", "Tool" }
+local armor = { "Equippable" }
+
+local infoStored = {}
+
+local function getInfo(object)
+    if not object or not object.Parent then return end
+    if infoStored[object.Name] then return infoStored[object.Name] end
+    local info = {}
+    for i, v in object:WaitForChild("ObjectInfo", 9e9):GetChildren() do
+        if v.Name ~= "Title" and v:IsA("TextLabel") then
+            table.insert(info, v.Text)
+        end
+    end
+    infoStored[object.Name] = info
+    return info
+end
+
+local function hasProperty(object, prop)
+    if not object or not object:FindFirstChild("ObjectInfo") then return false end
+    local info = getInfo(object)
+    if not info then return false end
+    for i, v in info do
+        if v == prop then
+            return true
+        end
+    end
+    return false
+end
+
+local ftiv = false
+local fti = getfenv().firetouchinterest
+task.spawn(function()
+    if fti then
+        local part = Instance.new("Part", workspace)
+        part.Position = Vector3.new(0, 100, 0)
+        part.Touched:Connect(function()
+            part:Destroy()
+            ftiv = true
+        end)
+        task.wait(0.1)
+        repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and part and part.Parent
+        fti(part, LocalPlayer.Character.HumanoidRootPart, 0)
+        fti(LocalPlayer.Character.HumanoidRootPart, part, 0)
+        task.wait()
+        repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and part and part.Parent
+        fti(part, LocalPlayer.Character.HumanoidRootPart, 1)
+        fti(LocalPlayer.Character.HumanoidRootPart, part, 1)
+    end
+end)
+
+local cd = {}
+local firetouchinterest = function(a,b,touching)
+    if ftiv then
+        return fti(a,b,touching)
+    end
+    if cd[a] or cd[b] then return end
+    cd[a] = true
+    touching = touching == 1
+    if not touching then
+        local c = b
+        local ct = c.CanTouch
+        c.CanTouch = false
+        task.wait(0.015)
+        c.CanTouch = ct
+    else
+        local pp = b:GetPivot()
+        local t,c,an = b.Transparency,b.CanCollide,b.Anchored
+        b:PivotTo(a:GetPivot())
+        b.Transparency = 1
+        b.CanCollide = false
+        b.Anchored = false
+        b.Velocity = b.Velocity + Vector3.new(0,1)
+        a.Touched:Wait()
+        b.Transparency = t
+        b.CanCollide = c
+        b.Anchored = an
+        b:PivotTo(pp)
+    end
+    task.wait()
+    cd[a] = false
+end
+
+local fppn = false
+local fpp = getfenv().fireproximityprompt
+if fpp then
+    pcall(function()
+        task.spawn(function()
+            local pp = Instance.new("ProximityPrompt", workspace)
+            local con; con = pp.Triggered:Connect(function()
+                con:Disconnect()
+                fppn = true
+                task.wait(0.1)
+                pp.Parent = nil
+                task.wait(0.1)
+                pp:Destroy()
+            end)
+            task.wait(0.1)
+            fpp(pp)
+            task.wait(1.5)
+            if pp and pp.Parent then
+                con:Disconnect()
+                task.wait(0.1)
+                pp.Parent = nil
+                task.wait(0.1)
+                pp:Destroy()
+            end
+        end)
+    end)
+end
+
+local function fppFunc(pp)
+    cd[pp] = true
+    local a,b,c,d,e = pp.MaxActivationDistance, pp.Enabled, pp.Parent, pp.HoldDuration, pp.RequiresLineOfSight
+    local obj = Instance.new("Part", workspace)
+    obj.Transparency = 1
+    obj.CanCollide = false
+    obj.Size = Vector3.new(0.1, 0.1, 0.1)
+    obj.Anchored = true
+    pp.Parent = obj
+    pp.MaxActivationDistance = math.huge
+    pp.Enabled = true
+    pp.HoldDuration = 0
+    pp.RequiresLineOfSight = false
+    if not pp or not pp.Parent then
+        obj:Destroy()
+        return
+    end
+    obj:PivotTo(workspace.CurrentCamera.CFrame + (workspace.CurrentCamera.CFrame.LookVector / 5))
+    task.wait()
+    obj:PivotTo(workspace.CurrentCamera.CFrame + (workspace.CurrentCamera.CFrame.LookVector / 5))
+    pp:InputHoldBegin()
+    task.wait()
+    obj:PivotTo(workspace.CurrentCamera.CFrame + (workspace.CurrentCamera.CFrame.LookVector / 5))
+    pp:InputHoldEnd()
+    task.wait()
+    obj:PivotTo(workspace.CurrentCamera.CFrame + (workspace.CurrentCamera.CFrame.LookVector / 5))
+    if pp.Parent == obj then
+        pp.Parent = c
+        pp.MaxActivationDistance = a
+        pp.Enabled = b
+        pp.HoldDuration = d
+        pp.RequiresLineOfSight = e
+    end
+    obj:Destroy()
+    cd[pp] = false
+end
+
+local fireproximityprompt = function(pp, i)
+    if not i and (typeof(pp) ~= "Instance" or not pp:IsA("ProximityPrompt") or cd[pp] or not workspace.CurrentCamera or ((LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart or workspace.CurrentCamera).CFrame.Position - pp.Parent:GetPivot().Position).Magnitude > pp.MaxActivationDistance * 2) then return end
+    if fppn then
+        return fpp(pp)
+    end
+    task.spawn(fppFunc, pp)
+end
+
+RunService.RenderStepped:Connect(function()
+    if nobandagedelay and LocalPlayer.PlayerGui.BandageUse.Enabled and LocalPlayer.Character then
+        local Bandage = LocalPlayer.Character:FindFirstChild("Bandage")
+        if Bandage then
+            Bandage.Use:FireServer()
+        end
+    end
+
+    if autoCollect then
+        for _, moneyBag in ipairs(workspace.RuntimeItems:GetChildren()) do
+            if moneyBag:IsA("Model") then
+                local prompt = moneyBag:FindFirstChild("CollectPrompt", true)
+                if prompt and prompt:IsA("ProximityPrompt") then
+                    prompt.HoldDuration = 0
+                    prompt:InputHoldBegin()
+                    task.wait(0.05)
+                    prompt:InputHoldEnd()
+                end
+            end
+        end
+    end
+
+    if autoHeal then
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health < healThreshold then
+            local bandage = LocalPlayer.Backpack:FindFirstChild("Bandage")
+            if bandage then
+                bandage.Use:FireServer()
+            end
+        end
+    end
+
+    if vals.AutoPickTools then
+        for i, v in pairs(tools) do
+            if v and v.Parent then
+                if (v:GetPivot().Position - LocalPlayer.Character:GetPivot().Position).Magnitude <= 30 then
+                    game:GetService("ReplicatedStorage").Remotes.Tool.PickUpTool:FireServer(v)
+                end
+            else
+                table.remove(tools, i)
+            end
+        end
+    end
+
+    if vals.AutoPickOther then
+        for i, v in pairs(other) do
+            if v and v.Parent then
+                if (v:GetPivot().Position - LocalPlayer.Character:GetPivot().Position).Magnitude <= 30 then
+                    game:GetService("ReplicatedStorage").Packages.RemotePromise.Remotes.C_ActivateObject:FireServer(v)
+                end
+            else
+                table.remove(other, i)
+            end
+        end
+    end
+
+    if vals.AutoPickBonds then
+        for i, v in pairs(bonds) do
+            if v and v.Parent then
+                if (v:GetPivot().Position - LocalPlayer.Character:GetPivot().Position).Magnitude <= 30 then
+                    game:GetService("ReplicatedStorage").Packages.RemotePromise.Remotes.C_ActivateObject:FireServer(v)
+                end
+            else
+                table.remove(bonds, i)
+            end
+        end
+    end
+
+    if vals.AutoPickArmor then
+        for i, v in pairs(equippables) do
+            if v and v.Parent then
+                if (v:GetPivot().Position - LocalPlayer.Character:GetPivot().Position).Magnitude <= 30 then
+                    game:GetService("ReplicatedStorage").Remotes.Object.EquipObject:FireServer(v)
+                end
+            else
+                table.remove(equippables, i)
+            end
+        end
+    end
+
+    if vals.AutoThrottle and workspace:FindFirstChild("Train") and workspace.Train.TrainControls.ConductorSeat:FindFirstChild("VehicleSeat") and math.abs(workspace.Train.TrainControls.ConductorSeat.VehicleSeat.Throttle) == 0 then
+        workspace.Train.TrainControls.ConductorSeat.VehicleSeat.Throttle = 1
+    end
+
+    if LocalPlayer.Character and vals.NoVoid and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position.Y <= -10 then
+        LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 10)
+        LocalPlayer.Character:PivotTo(LocalPlayer.Character:GetPivot() + Vector3.new(0, 20))
+    end
+end)
+
+local function instantPurchase()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            obj.HoldDuration = 0
+        end
+    end
+end
+
+game:GetService("RunService").RenderStepped:Connect(instantPurchase)
+
+
+local Tab6 = Window:MakeTab({"Fun", ""})
+
+Tab6:AddButton({
+    Name = "Delete Tool (Advanced)",
+    Callback = function()
+        local player = game:GetService("Players").LocalPlayer
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if not playerGui then
+            warn("Error: PlayerGui not found!")
+            return
+        end
+
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Parent = playerGui
+
+        local targetCircle = Instance.new("Frame")
+        targetCircle.Size = UDim2.new(0, 2, 0, 2)
+        targetCircle.Position = UDim2.new(0.5, -1, 0.5, -1)
+        targetCircle.BackgroundTransparency = 1
+        targetCircle.Parent = screenGui
+
+        local buttonFrame = Instance.new("Frame")
+        buttonFrame.Size = UDim2.new(0, 120, 0, 110)
+        buttonFrame.Position = UDim2.new(0.75, 0, 0.45, 0)
+        buttonFrame.BackgroundTransparency = 1
+        buttonFrame.Parent = screenGui
+
+        local deleteButton = Instance.new("TextButton")
+        deleteButton.Size = UDim2.new(0, 100, 0, 40)
+        deleteButton.Position = UDim2.new(0, 10, 0, 0)
+        deleteButton.BackgroundColor3 = Color3.new(1, 0, 0)
+        deleteButton.TextColor3 = Color3.new(1, 1, 1)
+        deleteButton.Text = "Delete"
+        deleteButton.Parent = buttonFrame
+
+        local cancelButton = Instance.new("TextButton")
+        cancelButton.Size = UDim2.new(0, 100, 0, 40)
+        cancelButton.Position = UDim2.new(0, 10, 0, 50)
+        cancelButton.BackgroundColor3 = Color3.new(0, 1, 0)
+        cancelButton.TextColor3 = Color3.new(1, 1, 1)
+        cancelButton.Text = "Cancel"
+        cancelButton.Parent = buttonFrame
+
+        local mouse = player:GetMouse()
+        local connection
+
+        connection = mouse.Move:Connect(function()
+            targetCircle.Position = UDim2.new(0, mouse.X, 0, mouse.Y)
+        end)
+
+        deleteButton.MouseButton1Click:Connect(function()
+            local target = mouse.Target
+            if target and target:IsA("BasePart") and target.Parent:IsA("Tool") then
+                target.Parent:Destroy()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "Tool Deleted",
+                    Text = "Successfully deleted the tool.",
+                    Duration = 3
+                })
+            end
+            connection:Disconnect()
+            screenGui:Destroy()
+        end)
+
+        cancelButton.MouseButton1Click:Connect(function()
+            connection:Disconnect()
+            screenGui:Destroy()
+        end)
+    end
+})
+
+Tab6:AddButton({
+    Name = "Gojo's murasaki but bad",
+    Callback = function()
+        local TweenService = game:GetService("TweenService")
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return end
+
+        local effectPart = Instance.new("Part")
+        effectPart.Size = Vector3.new(5, 5, 5)
+        effectPart.Position = humanoidRootPart.Position + Vector3.new(0, 5, 0)
+        effectPart.Anchored = true
+        effectPart.CanCollide = false
+        effectPart.BrickColor = BrickColor.new("Bright violet")
+        effectPart.Transparency = 0.5
+        effectPart.Parent = workspace
+
+        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(effectPart, tweenInfo, {Size = Vector3.new(10, 10, 10), Transparency = 1})
+        tween:Play()
+
+        tween.Completed:Connect(function()
+            effectPart:Destroy()
+        end)
+    end
+})
+
+Tab6:AddButton({
+    Name = "Rainbow Character",
+    Callback = function()
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local RunService = game:GetService("RunService")
+
+        local connection
+        connection = RunService.RenderStepped:Connect(function()
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local time = tick()
+                    local r = math.sin(time * 2) * 127 + 128
+                    local g = math.sin(time * 2 + 2) * 127 + 128
+                    local b = math.sin(time * 2 + 4) * 127 + 128
+                    part.BrickColor = BrickColor.new(Color3.fromRGB(r, g, b))
+                end
+            end
+        end)
+
+        task.delay(10, function()
+            if connection then
+                connection:Disconnect()
+            end
+        end)
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid", 10)
+    rootPart = character:WaitForChild("HumanoidRootPart", 10)
+    if isFlying then
+        task.wait(0.7)
+        toggleFly(true)
+    end
+end)
+
+StarterGui:SetCore("SendNotification", {
+    Title = "Haha Gamer Dead Rails Script",
+    Text = "Loaded successfully! Use the UI to toggle features.",
+    Duration = 5
+})
