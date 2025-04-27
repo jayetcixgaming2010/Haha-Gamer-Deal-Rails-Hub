@@ -1,4 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jayetcixgaming2010/Select-Team/refs/heads/main/Haha%20Gamer%20Hub"))()
+loadstring(game:HttpGet("https://pastefy.app/5KsKZeNC/raw"))()
 loadstring(game:HttpGet("https://pastefy.app/tgBsrgBP/raw"))()
 
 local MatsuneA1 = {};
